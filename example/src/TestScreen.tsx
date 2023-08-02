@@ -94,7 +94,7 @@ function TestView({
   );
 }
 
-export default function TestsView(): JSX.Element {
+export default function TestScreen(): JSX.Element {
   const [completedTests, setCompletedTests] = useState<number>(0);
 
   return (
