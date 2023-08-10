@@ -17,6 +17,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   useConversation,
+  useEphemeralMessages,
   useMessage,
   useMessageReactions,
   useMessages,
@@ -27,6 +28,7 @@ import { useDebounce } from "./hooks/useDebounce";
 import TypingIndicator from "./TypingIndicator";
 import { usePrevious } from "./hooks/usePrevious";
 import { TypingStatus, useTypingStatus } from "./hooks/useIsTyping";
+import { useXmtp } from './XmtpContext';
 
 /// Show the messages in a conversation.
 export default function ConversationScreen({
@@ -88,6 +90,19 @@ export default function ConversationScreen({
   const debouncedTextMessage = useDebounce(text, 600)
 
   const typingStatus = useTypingStatus(debouncedTextMessage)
+
+  const latestEphemeralMessage = useEphemeralMessages(conversation)
+
+  const client = useXmtp()
+
+
+  useEffect(() => {
+    console.log({
+      myself: client.client?.address ?? "N/A",
+      latestEphemeralMessage
+    })
+  }, [latestEphemeralMessage, client])
+
 
   useEffect(() => {
     const sendTypingStatus = async () => {

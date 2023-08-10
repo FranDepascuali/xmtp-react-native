@@ -2,6 +2,7 @@ import { useQuery, UseQueryResult } from "react-query";
 import { Conversation, DecodedMessage } from "xmtp-react-native-sdk";
 import { useXmtp } from "./XmtpContext";
 import EncryptedStorage from "react-native-encrypted-storage";
+import {useEffect, useState} from 'react';
 
 /**
  * List all conversations.
@@ -60,6 +61,31 @@ export function useMessages({
       enabled: !!client && !!topic && !!conversation,
     },
   );
+}
+
+/**
+ * List messages in the conversation identified by `topic`.
+ *
+ * Note: this is better done with a DB, but we're using react-query for now.
+ */
+export function useEphemeralMessages(conversation?: Conversation) {
+  const [message, setMessage] = useState<DecodedMessage | null>(null);
+
+  useEffect(() => {
+    if (!conversation) {
+      return
+    }
+
+    const unsubscribe = conversation.streamMessages(async (receivedMessage) => {
+      setMessage(receivedMessage);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  return message;
 }
 
 /**
