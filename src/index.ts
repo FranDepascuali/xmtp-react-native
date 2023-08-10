@@ -191,6 +191,31 @@ export async function unsubscribeFromMessages(
   );
 }
 
+export async function subscribeToEphemeralMessages(
+  clientAddress: string,
+  topic: string,
+  conversationID?: string | undefined
+) {
+  return await XMTPModule.subscribeToEphemeralMessages(
+    clientAddress,
+    topic,
+    conversationID,
+  );
+}
+
+export async function unsubscribeFromEphemeralMessages(
+  clientAddress: string,
+  topic: string,
+  conversationID?: string | undefined
+) {
+  return await XMTPModule.unsubscribeFromEphemeralMessages(
+    clientAddress,
+    topic,
+    conversationID,
+  );
+}
+
+
 export function registerPushToken(pushServer: string, token: string) {
   return XMTPModule.registerPushToken(pushServer, token);
 }

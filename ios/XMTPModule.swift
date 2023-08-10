@@ -447,6 +447,37 @@ public class XMTPModule: Module {
         }
     }
 
+    // TODO
+    func subscribeToEphemeralMessages(clientAddress: String, topic: String, conversationID: String?) async throws {
+        guard let conversation = try await findConversation(clientAddress: clientAddress, topic: topic) else {
+            return
+        }
+
+        subscriptions[conversation.cacheKey(clientAddress)] = Task {
+            do {
+                for try await message in conversation.streamMessages() {
+                    sendEvent("message", [
+                        "topic": conversation.topic,
+                        "conversationID": conversation.conversationID,
+                        "messageJSON": try DecodedMessageWrapper.encode(message)
+                    ])
+                }
+            } catch {
+                print("Error in messages subscription: \(error)")
+                subscriptions[conversation.cacheKey(clientAddress)]?.cancel()
+            }
+        }
+    }
+
+    // TODO
+    func unsubscribeFromEphemeralMessages(clientAddress: String, topic: String, conversationID: String?) async throws {
+        guard let conversation = try await findConversation(clientAddress: clientAddress, topic: topic) else {
+            return
+        }
+
+        subscriptions[conversation.cacheKey(clientAddress)]?.cancel()
+    }
+
     func unsubscribeFromMessages(clientAddress: String, topic: String, conversationID: String?) async throws {
         guard let conversation = try await findConversation(clientAddress: clientAddress, topic: topic) else {
             return
@@ -454,4 +485,6 @@ public class XMTPModule: Module {
 
         subscriptions[conversation.cacheKey(clientAddress)]?.cancel()
     }
+
+
 }
