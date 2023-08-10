@@ -76,7 +76,7 @@ export function useEphemeralMessages(conversation?: Conversation) {
       return
     }
 
-    const unsubscribe = conversation.streamMessages(async (receivedMessage) => {
+    const unsubscribe = conversation.streamEphemeralMessages(async (receivedMessage) => {
       setMessage(receivedMessage);
     });
 

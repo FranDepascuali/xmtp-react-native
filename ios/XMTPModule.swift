@@ -60,6 +60,10 @@ struct SignatureRequest: Codable {
 
 extension Conversation {
 
+    static func ephemeralCacheKey(clientAddress: String, topic: String) -> String {
+        return "\(clientAddress):\(topic):ephemeral"
+    }
+
     static func cacheKeyForTopic(clientAddress: String, topic: String) -> String {
             return "\(clientAddress):\(topic)"
         }
@@ -83,7 +87,7 @@ public class XMTPModule: Module {
     public func definition() -> ModuleDefinition {
     Name("XMTP")
 
-    Events("sign", "authed", "conversation", "message")
+    Events("sign", "authed", "conversation", "message", "ephemeral-message")
 
         Function("address") { (clientAddress: String) -> String in
             if let client = clients[clientAddress] {
@@ -298,6 +302,14 @@ public class XMTPModule: Module {
             try await subscribeToMessages(clientAddress: clientAddress, topic: topic, conversationID: conversationID)
         }
 
+        AsyncFunction("subscribeToEphemeralMessages") { (clientAddress: String, topic: String, conversationID: String?) in
+            try await subscribeToEphemeralMessages(clientAddress: clientAddress, topic: topic, conversationID: conversationID)
+        }
+
+        AsyncFunction("unsubscribeFromEphemeralMessages") { (clientAddress: String, topic: String, conversationID: String?) in
+            try await unsubscribeFromMessages(clientAddress: clientAddress, topic: topic, conversationID: conversationID)
+        }
+
         AsyncFunction("unsubscribeFromMessages") { (clientAddress: String, topic: String, conversationID: String?) in
             try await unsubscribeFromMessages(clientAddress: clientAddress, topic: topic, conversationID: conversationID)
         }
@@ -453,10 +465,12 @@ public class XMTPModule: Module {
             return
         }
 
-        subscriptions[conversation.cacheKey(clientAddress)] = Task {
+        let cacheKey = Conversation.ephemeralCacheKey(clientAddress: clientAddress, topic: topic)
+
+        subscriptions[cacheKey] = Task {
             do {
                 for try await message in conversation.streamMessages() {
-                    sendEvent("message", [
+                    sendEvent("ephemeral-message", [
                         "topic": conversation.topic,
                         "conversationID": conversation.conversationID,
                         "messageJSON": try DecodedMessageWrapper.encode(message)
@@ -464,18 +478,19 @@ public class XMTPModule: Module {
                 }
             } catch {
                 print("Error in messages subscription: \(error)")
-                subscriptions[conversation.cacheKey(clientAddress)]?.cancel()
+                subscriptions[cacheKey]?.cancel()
             }
         }
     }
 
-    // TODO
     func unsubscribeFromEphemeralMessages(clientAddress: String, topic: String, conversationID: String?) async throws {
         guard let conversation = try await findConversation(clientAddress: clientAddress, topic: topic) else {
             return
         }
 
-        subscriptions[conversation.cacheKey(clientAddress)]?.cancel()
+        let cacheKey = Conversation.ephemeralCacheKey(clientAddress: clientAddress, topic: topic)
+
+        subscriptions[cacheKey]?.cancel()
     }
 
     func unsubscribeFromMessages(clientAddress: String, topic: String, conversationID: String?) async throws {
