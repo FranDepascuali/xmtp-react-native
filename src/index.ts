@@ -93,6 +93,7 @@ export async function listMessages(
   limit?: number | undefined,
   before?: Date | undefined,
   after?: Date | undefined,
+  onlyEphemeral?: boolean | undefined,
 ): Promise<DecodedMessage[]> {
   const messages = await XMTPModule.loadMessages(
     clientAddress,
@@ -147,6 +148,7 @@ export async function sendMessage(
   conversationTopic: string,
   conversationID: string | undefined,
   content: MessageContent,
+  isEphemeral: boolean = false,
 ): Promise<string> {
   // TODO: consider eager validating of `MessageContent` here
   //       instead of waiting for native code to validate
@@ -156,6 +158,7 @@ export async function sendMessage(
     conversationTopic,
     conversationID,
     contentJson,
+    isEphemeral,
   );
 }
 
@@ -173,6 +176,18 @@ export async function subscribeToMessages(
   conversationID?: string | undefined,
 ) {
   return await XMTPModule.subscribeToMessages(
+    clientAddress,
+    topic,
+    conversationID,
+  );
+}
+
+export async function subscribeToEphemeralMessages(
+  clientAddress: string,
+  topic: string,
+  conversationID?: string | undefined,
+) {
+  return await XMTPModule.subscribeToEphemeralMessages(
     clientAddress,
     topic,
     conversationID,

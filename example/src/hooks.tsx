@@ -63,6 +63,38 @@ export function useMessages({
 }
 
 /**
+ * List ephemeral messages in the conversation identified by `topic`.
+ */
+export function useEphemeralMessages({
+  topic,
+}: {
+  topic: string;
+}): UseQueryResult<DecodedMessage[]> {
+  const { client } = useXmtp();
+  const { data: conversation } = useConversation({ topic });
+
+  return useQuery<DecodedMessage[]>(
+    ["xmtp", "ephemeralMessages", client?.address, conversation?.topic],
+    async () => {
+      if (conversation) {
+        const stream = await conversation.streamEphemeral();
+        const messages: DecodedMessage[] = [];
+
+        for await (const message of stream) {
+          messages.push(message);
+        }
+
+        return messages;
+      }
+      throw new Error("No conversation available");
+    },
+    {
+      enabled: !!client && !!topic && !!conversation,
+    }
+  );
+}
+
+/**
  * Get the message with the `messageId` from the conversation identified by `topic`.
  *
  * Note: this is better done with a DB, but we're using react-query for now.

@@ -14,7 +14,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   useConversation,
   useMessage,
@@ -23,6 +23,9 @@ import {
 } from "./hooks";
 import { MessageContent } from "xmtp-react-native-sdk";
 import moment from "moment";
+import { useDebounce } from "./hooks/useDebounce";
+import TypingIndicator from "./TypingIndicator";
+import { usePrevious } from "./hooks/usePrevious";
 
 /// Show the messages in a conversation.
 export default function ConversationScreen({
@@ -43,11 +46,11 @@ export default function ConversationScreen({
 
   messages = (messages || []).filter(({ content }) => !content.reaction);
   // console.log("messages", JSON.stringify(messages, null, 2));
-  const sendMessage = async (content: MessageContent) => {
+  const sendMessage = async (content: MessageContent, isEphemeral: boolean) => {
     setSending(true);
     console.log("Sending message", content);
     try {
-      await conversation!.send(content);
+      await conversation!.send(content, isEphemeral);
       await refreshMessages();
     } catch (e) {
       console.log("Error sending message", e);
@@ -55,7 +58,7 @@ export default function ConversationScreen({
       setSending(false);
     }
   };
-  const sendTextMessage = () =>
+  const sendTextMessage = (isEphemeral: boolean) =>
     sendMessage(
       replyingTo
         ? {
@@ -65,6 +68,7 @@ export default function ConversationScreen({
             },
           }
         : { text },
+        isEphemeral
     ).then(() => {
       setText("");
       setReplyingTo(null);
@@ -79,6 +83,29 @@ export default function ConversationScreen({
       animated: true,
     });
   };
+
+  // TODO: extract into hook all of this?
+  const debouncedTextMessage = useDebounce(text, 600)
+
+  const isTyping = debouncedTextMessage.length > 0
+
+  const wasTyping = usePrevious(isTyping) ?? false
+
+  useEffect(() => {
+    const sendTypingStatus = async () => {
+        console.log("is typing: ", isTyping, " wasTyping: ", wasTyping);
+
+        if (isTyping && !wasTyping) {
+            await conversation!.send({ text: "typing" }, true);
+        } else if (!isTyping && wasTyping) {
+            await conversation!.send({ text: "not typing" }, true);
+        }
+    };
+
+    sendTypingStatus();
+
+  }, [debouncedTextMessage])
+
   // const sendAttachment = () => sendMessage({
   //     attachment: {
   //         mimeType: "text/plain",
@@ -94,6 +121,7 @@ export default function ConversationScreen({
         style={{ flex: 1, flexDirection: "column" }}
       >
         <View style={{ flex: 1 }}>
+          <TypingIndicator isTyping={isTyping} />
           <FlatList
             ref={messageListRef}
             style={{ flexGrow: 1 }}

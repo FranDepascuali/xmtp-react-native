@@ -50,8 +50,29 @@ export class Conversation {
     }
   }
 
+  async ephemeralMessages(
+    limit?: number | undefined,
+    before?: Date | undefined,
+    after?: Date | undefined,
+  ): Promise<DecodedMessage[]> {
+    const ephemeralTopic = this.getEphemeralTopic(); // Getting the ephemeral topic based on your current topic
+    try {
+      return await XMTP.listMessages(
+        this.clientAddress,
+        ephemeralTopic,
+        this.conversationID,
+        limit,
+        before,
+        after,
+      );
+    } catch (e) {
+      console.info("ERROR in ephemeralMessages", e);
+      return [];
+    }
+  }
+
   // TODO: support conversation ID
-  async send(content: string | MessageContent): Promise<string> {
+  async send(content: string | MessageContent, isEphemeral: boolean = false): Promise<string> {
     try {
       if (typeof content === "string") {
         content = { text: content };
@@ -61,6 +82,7 @@ export class Conversation {
         this.topic,
         this.conversationID,
         content,
+        isEphemeral,
       );
     } catch (e) {
       console.info("ERROR in send()", e);
