@@ -14,7 +14,7 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   useConversation,
   useMessage,
@@ -23,6 +23,10 @@ import {
 } from "./hooks";
 import { MessageContent } from "xmtp-react-native-sdk";
 import moment from "moment";
+import { useDebounce } from "./hooks/useDebounce";
+import TypingIndicator from "./TypingIndicator";
+import { usePrevious } from "./hooks/usePrevious";
+import { TypingStatus, useTypingStatus } from "./hooks/useIsTyping";
 
 /// Show the messages in a conversation.
 export default function ConversationScreen({
@@ -79,6 +83,33 @@ export default function ConversationScreen({
       animated: true,
     });
   };
+
+  // We debounce to avoid producing a lot of events when the user is typing
+  const debouncedTextMessage = useDebounce(text, 600)
+
+  const typingStatus = useTypingStatus(debouncedTextMessage)
+
+  useEffect(() => {
+    const sendTypingStatus = async () => {
+      if (!typingStatus) {
+        return
+      }
+
+      switch (typingStatus) {
+        case TypingStatus.startedTyping:
+          console.log("user is typing")
+          return
+
+        case TypingStatus.finishedTyping:
+          console.log("user is not typing")
+          return
+      }
+    };
+
+    sendTypingStatus();
+
+  }, [typingStatus])
+
   // const sendAttachment = () => sendMessage({
   //     attachment: {
   //         mimeType: "text/plain",
@@ -94,6 +125,7 @@ export default function ConversationScreen({
         style={{ flex: 1, flexDirection: "column" }}
       >
         <View style={{ flex: 1 }}>
+          <TypingIndicator isTyping={debouncedTextMessage.length > 0} />
           <FlatList
             ref={messageListRef}
             style={{ flexGrow: 1 }}
