@@ -147,6 +147,7 @@ export async function sendMessage(
   conversationTopic: string,
   conversationID: string | undefined,
   content: MessageContent,
+  ephemeral: boolean,
 ): Promise<string> {
   // TODO: consider eager validating of `MessageContent` here
   //       instead of waiting for native code to validate
@@ -156,6 +157,7 @@ export async function sendMessage(
     conversationTopic,
     conversationID,
     contentJson,
+    ephemeral,
   );
 }
 

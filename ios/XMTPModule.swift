@@ -261,7 +261,7 @@ public class XMTPModule: Module {
             return messages
         }
 
-        AsyncFunction("sendMessage") { (clientAddress: String, conversationTopic: String, conversationID: String?, contentJson: String) -> String in
+        AsyncFunction("sendMessage") { (clientAddress: String, conversationTopic: String, conversationID: String?, contentJson: String, ephemeral: Bool) -> String in
             guard let conversation = try await findConversation(clientAddress: clientAddress, topic: conversationTopic) else {
                 throw Error.conversationNotFound("no conversation found for \(conversationTopic)")
             }
@@ -269,7 +269,7 @@ public class XMTPModule: Module {
             let sending = try ContentJson.fromJson(contentJson)
             return try await conversation.send(
                 content: sending.content,
-                options: SendOptions(contentType: sending.type)
+                options: SendOptions(contentType: sending.type, ephemeral: ephemeral)
             )
         }
 
@@ -459,7 +459,6 @@ public class XMTPModule: Module {
         }
     }
 
-    // TODO
     func subscribeToEphemeralMessages(clientAddress: String, topic: String, conversationID: String?) async throws {
         guard let conversation = try await findConversation(clientAddress: clientAddress, topic: topic) else {
             return
@@ -469,11 +468,20 @@ public class XMTPModule: Module {
 
         subscriptions[cacheKey] = Task {
             do {
-                for try await message in conversation.streamMessages() {
+                let ephemeralStream = conversation.streamEphemeral()
+                guard let ephemeralStream = ephemeralStream else {
+                    print("no ephemeral stream")
+                    subscriptions[cacheKey]?.cancel()
+                    return
+                }
+
+                for try await envelope in ephemeralStream {
+                    let decodedMessage = try conversation.decode(envelope)
+                    let messageJSON = try DecodedMessageWrapper.encode(decodedMessage)
                     sendEvent("ephemeral-message", [
                         "topic": conversation.topic,
                         "conversationID": conversation.conversationID,
-                        "messageJSON": try DecodedMessageWrapper.encode(message)
+                        "messageJSON": messageJSON
                     ])
                 }
             } catch {
@@ -484,10 +492,6 @@ public class XMTPModule: Module {
     }
 
     func unsubscribeFromEphemeralMessages(clientAddress: String, topic: String, conversationID: String?) async throws {
-        guard let conversation = try await findConversation(clientAddress: clientAddress, topic: topic) else {
-            return
-        }
-
         let cacheKey = Conversation.ephemeralCacheKey(clientAddress: clientAddress, topic: topic)
 
         subscriptions[cacheKey]?.cancel()
@@ -500,6 +504,5 @@ public class XMTPModule: Module {
 
         subscriptions[conversation.cacheKey(clientAddress)]?.cancel()
     }
-
 
 }

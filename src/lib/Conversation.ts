@@ -51,7 +51,7 @@ export class Conversation {
   }
 
   // TODO: support conversation ID
-  async send(content: string | MessageContent): Promise<string> {
+  async send(content: string | MessageContent, ephemeral: boolean): Promise<string> {
     try {
       if (typeof content === "string") {
         content = { text: content };
@@ -61,6 +61,7 @@ export class Conversation {
         this.topic,
         this.conversationID,
         content,
+        ephemeral,
       );
     } catch (e) {
       console.info("ERROR in send()", e);

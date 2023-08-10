@@ -2,15 +2,23 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 
 interface Props {
-  isTyping: boolean;
+  addressesTyping: string[];
 }
 
-const TypingIndicator = ({ isTyping }: Props) => {
-  if (!isTyping) return null;
+const TypingIndicator = ({ addressesTyping }: Props) => {
+  if (addressesTyping.length === 0) return null;
+
+  if (addressesTyping.length === 1) {
+      return (
+        <View style={styles.container}>
+          <Text style={styles.text}>{addressesTyping[0]} is typing...</Text>
+        </View>
+      );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>User is typing...</Text>
+      <Text style={styles.text}>{addressesTyping.length} addresses are typing...</Text>
     </View>
   );
 };

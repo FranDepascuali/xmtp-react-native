@@ -68,8 +68,10 @@ export function useMessages({
  *
  * Note: this is better done with a DB, but we're using react-query for now.
  */
-export function useEphemeralMessages(conversation?: Conversation) {
+export function useReceivedEphemeralMessages(conversation?: Conversation) {
   const [message, setMessage] = useState<DecodedMessage | null>(null);
+
+  const {client} = useXmtp();
 
   useEffect(() => {
     if (!conversation) {
@@ -77,7 +79,9 @@ export function useEphemeralMessages(conversation?: Conversation) {
     }
 
     const unsubscribe = conversation.streamEphemeralMessages(async (receivedMessage) => {
-      setMessage(receivedMessage);
+      if (receivedMessage.senderAddress !== client?.address) {
+        setMessage(receivedMessage);
+      }
     });
 
     return () => {
