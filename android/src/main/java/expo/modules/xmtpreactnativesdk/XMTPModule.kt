@@ -81,6 +81,10 @@ fun Conversation.cacheKey(clientAddress: String): String {
     return "${clientAddress}:${topic}"
 }
 
+fun Conversation.ephemeralCacheKey(clientAddress: String): String {
+    return "${clientAddress}:${topic}:ephemeral"
+}
+
 class XMTPModule : Module() {
     private fun apiEnvironments(env: String, appVersion: String?): ClientOptions.Api {
         return when (env) {
@@ -113,7 +117,7 @@ class XMTPModule : Module() {
 
     override fun definition() = ModuleDefinition {
         Name("XMTP")
-        Events("sign", "authed", "conversation", "message")
+        Events("sign", "authed", "conversation", "message", "ephemeral-message")
 
         Function("address") { clientAddress: String ->
             logV("address")
@@ -261,7 +265,7 @@ class XMTPModule : Module() {
                 .map { DecodedMessageWrapper.encode(it) }
         }
 
-        AsyncFunction("sendMessage") { clientAddress: String, conversationTopic: String, conversationID: String?, contentJson: String ->
+        AsyncFunction("sendMessage") { clientAddress: String, conversationTopic: String, conversationID: String?, contentJson: String, ephemeral: Boolean ->
             logV("sendMessage")
             val conversation =
                 findConversation(
@@ -272,7 +276,7 @@ class XMTPModule : Module() {
             val sending = ContentJson.fromJson(contentJson)
             conversation.send(
                 content = sending.content,
-                options = SendOptions(contentType = sending.type)
+                options = SendOptions(contentType = sending.type, ephemeral = ephemeral)
             )
         }
 
@@ -302,6 +306,24 @@ class XMTPModule : Module() {
         AsyncFunction("subscribeToMessages") { clientAddress: String, topic: String, conversationID: String? ->
             logV("subscribeToMessages")
             subscribeToMessages(
+                clientAddress = clientAddress,
+                topic = topic,
+                conversationId = conversationID
+            )
+        }
+
+        AsyncFunction("subscribeToEphemeralMessages") { clientAddress: String, topic: String, conversationID: String? ->
+            logV("subscribeToEphemeralMessages")
+            subscribeToEphemeralMessages(
+                clientAddress = clientAddress,
+                topic = topic,
+                conversationId = conversationID
+            )
+        }
+
+        AsyncFunction("unsubscribeFromEphemeralMessages") { clientAddress: String, topic: String, conversationID: String? ->
+            logV("unsubscribeFromEphemeralMessages")
+            unsubscribeFromEphemeralMessages(
                 clientAddress = clientAddress,
                 topic = topic,
                 conversationId = conversationID
@@ -442,6 +464,46 @@ class XMTPModule : Module() {
                     subscriptions[conversation.cacheKey(clientAddress)]?.cancel()
                 }
             }
+    }
+
+    private fun subscribeToEphemeralMessages(clientAddress: String, topic: String, conversationId: String?) {
+        val conversation =
+            findConversation(
+                clientAddress = clientAddress,
+                topic = topic
+            ) ?: return
+        subscriptions[conversation.ephemeralCacheKey(clientAddress)] =
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    conversation.streamEphemeral().collect { envelop ->
+                        val message = conversation.decode(envelop)
+                        sendEvent(
+                            "ephemeral-message",
+                            mapOf(
+                                "topic" to conversation.topic,
+                                "conversationID" to conversation.conversationId,
+                                "messageJSON" to DecodedMessageWrapper.encode(message)
+                            )
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e("XMTPModule", "Error in ephemeral messages subscription: $e")
+                    subscriptions[conversation.ephemeralCacheKey(clientAddress)]?.cancel()
+                }
+            }
+    }
+
+    private fun unsubscribeFromEphemeralMessages(
+        clientAddress: String,
+        topic: String,
+        conversationId: String?,
+    ) {
+        val conversation =
+            findConversation(
+                clientAddress = clientAddress,
+                topic = topic
+            ) ?: return
+        subscriptions[conversation.ephemeralCacheKey(clientAddress)]?.cancel()
     }
 
     private fun unsubscribeFromMessages(

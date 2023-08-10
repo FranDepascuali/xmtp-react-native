@@ -485,7 +485,7 @@ public class XMTPModule: Module {
                     ])
                 }
             } catch {
-                print("Error in messages subscription: \(error)")
+                print("Error in ephemeral messages subscription: \(error)")
                 subscriptions[cacheKey]?.cancel()
             }
         }
