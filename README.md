@@ -4,7 +4,7 @@
 
 This repo provides a package you can use to build with XMTP in a React Native or Expo app.
 
-> **Important**  
+> **Important**
 > This SDK is in **beta** status and ready for you to start experimenting with.
 >
 > However, we do **not** recommend using beta software in production apps. Software in this status will change as we add features and iterate based on feedback.
@@ -96,8 +96,8 @@ Currently, network nodes are configured to rate limit high-volume publishing fro
 
 ## Use local storage
 
-> **Important**  
-> If you are building a production-grade app, be sure to use an architecture that includes a local cache backed by an XMTP SDK.  
+> **Important**
+> If you are building a production-grade app, be sure to use an architecture that includes a local cache backed by an XMTP SDK.
 
 To learn more, see [Use a local cache](https://xmtp.org/docs/tutorials/performance#use-a-local-cache).
 
@@ -108,7 +108,7 @@ A client is created with `Client.create(wallet: Signer): Promise<Client>` that r
 1. To sign the newly generated key bundle. This happens only the very first time when key bundle is not found in storage.
 2. To sign a random salt used to encrypt the key bundle in storage. This happens every time the client is started (including the very first time).
 
-> **Important**  
+> **Important**
 > The client connects to the XMTP `dev` environment by default. [Use `ClientOptions`](#configure-the-client) to change this and other parameters of the network connection.
 
 ```tsx
@@ -156,7 +156,7 @@ These conversations include all conversations for a user **regardless of which a
 
 You can also listen for new conversations being started in real-time. This will allow applications to display incoming messages from new contacts.
 
-> **Warning**  
+> **Warning**
 > This stream will continue infinitely. To end the stream you can either break from the loop, or call `await stream.return()`.
 
 ```tsx
@@ -167,6 +167,27 @@ for await (const conversation of stream) {
   await conversation.send('Hi there!')
   // Break from the loop to stop listening
   break
+}
+```
+
+### Listen for ephemeral messages in a conversation
+Ephemeral messages are transient messages in a conversation that are not meant to be permanently stored. You can listen for any new ephemeral messages (incoming or outgoing) in a conversation by calling conversation.streamEphemeralMessages().
+
+Note that ephemeral messages will not be available when listing a conversation messages because they related to a different topic.
+
+> **Warning**
+> This stream will continue infinitely. To end the stream you can either break from the loop, or call `await stream.return()`.
+
+```tsx
+const conversation = await xmtp.conversations.newConversation(
+  '0x3F11b27F323b62B159D2642964fa27C46C841897'
+)
+for await (const ephemeralMessage of await conversation.streamEphemeralMessages()) {
+  if (ephemeralMessage.senderAddress === xmtp.address) {
+    // This ephemeral message was sent from me
+    continue
+  }
+  console.log(`New ephemeral message from ${ephemeralMessage.senderAddress}: ${ephemeralMessage.content}`)
 }
 ```
 
@@ -246,7 +267,7 @@ for await (const message of await conversation.streamMessages()) {
 
 To listen for any new messages from _all_ conversations, use `conversations.streamAllMessages()`.
 
-> **Note**  
+> **Note**
 > There is a chance this stream can miss messages if multiple new conversations are received in the time it takes to update the stream to include a new conversation.
 
 ```tsx
@@ -344,7 +365,7 @@ For example, see the [Codecs](https://github.com/xmtp/xmtp-react-native/blob/mai
 
 As shown in the example above, you must provide a `contentFallback` value. Use it to provide an alt text-like description of the original content. Providing a `contentFallback` value enables clients that don't support the content type to still display something meaningful.
 
-> **Caution**  
+> **Caution**
 > If you don't provide a `contentFallback` value, clients that don't support the content type will display an empty message. This results in a poor user experience and breaks interoperability.
 
 To learn more about how to build a custom content type, see [Build a custom content type](https://xmtp.org/docs/concepts/content-types#build-a-custom-content-type).
@@ -383,11 +404,11 @@ For this tutorial, we'll use [Firebase Cloud Messaging](https://console.firebase
 
 3. Add the `google-services.json` file to the example app's project as described in the FCM project creation process.
 
-4. Generate FCM credentials, which you need to run the example notification server. To do this, from the FCM dashboard, click the gear icon next to **Project Overview** and select **Project settings**. Select **Service accounts**. Select **Go** and click **Generate new private key**. 
+4. Generate FCM credentials, which you need to run the example notification server. To do this, from the FCM dashboard, click the gear icon next to **Project Overview** and select **Project settings**. Select **Service accounts**. Select **Go** and click **Generate new private key**.
 
 ### Run an example notification server
 
-Now that you have an FCM server set up, take a look at the [export-kotlin-proto-code](https://github.com/xmtp/example-notification-server-go/tree/np/export-kotlin-proto-code) branch in the `example-notifications-server-go` repo. 
+Now that you have an FCM server set up, take a look at the [export-kotlin-proto-code](https://github.com/xmtp/example-notification-server-go/tree/np/export-kotlin-proto-code) branch in the `example-notifications-server-go` repo.
 
 This example branch can serve as the basis for what you might want to provide for your own notification server. The branch also demonstrates how to generate the proto code if you decide to perform these tasks for your own app. This proto code from the example notification server has already been generated in the `xmtp-android` example app.
 
@@ -400,11 +421,11 @@ This example branch can serve as the basis for what you might want to provide fo
 3. Get the FCM project ID and FCM credentials you created earlier and run:
 
     ```bash
-      YOURFCMJSON=`cat YOURFIREBASEADMINFROMSTEP4.json` 
+      YOURFCMJSON=`cat YOURFIREBASEADMINFROMSTEP4.json`
     ```
 
     ```bash
-    dev/run \                                                                     
+    dev/run \
     --xmtp-listener-tls \
     --xmtp-listener \
     --api \
