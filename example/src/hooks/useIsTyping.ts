@@ -1,9 +1,8 @@
-import { useDebounce } from "./useDebounce"
 import { usePrevious } from "./usePrevious"
 
 export enum TypingStatus {
-  startedTyping = "typing",
-  finishedTyping = "notTyping",
+  typing = "typing",
+  notTyping = "not_typing",
 }
 
 export const useTypingStatus = (text: string): TypingStatus | undefined => {
@@ -17,10 +16,10 @@ export const useTypingStatus = (text: string): TypingStatus | undefined => {
   // The cons of this approach is that if the receiver leaves the conversation
   // and comes back, they will not receive the startedTyping message again
   if (isTyping && !wasTyping) {
-    return TypingStatus.startedTyping
+    return TypingStatus.typing
   }
 
   if (!isTyping && wasTyping) {
-    return TypingStatus.finishedTyping
+    return TypingStatus.notTyping
   }
 }

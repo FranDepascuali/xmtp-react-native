@@ -147,6 +147,7 @@ export async function sendMessage(
   conversationTopic: string,
   conversationID: string | undefined,
   content: MessageContent,
+  ephemeral: boolean,
 ): Promise<string> {
   // TODO: consider eager validating of `MessageContent` here
   //       instead of waiting for native code to validate
@@ -156,6 +157,7 @@ export async function sendMessage(
     conversationTopic,
     conversationID,
     contentJson,
+    ephemeral,
   );
 }
 
@@ -190,6 +192,31 @@ export async function unsubscribeFromMessages(
     conversationID,
   );
 }
+
+export async function subscribeToEphemeralMessages(
+  clientAddress: string,
+  topic: string,
+  conversationID?: string | undefined
+) {
+  return await XMTPModule.subscribeToEphemeralMessages(
+    clientAddress,
+    topic,
+    conversationID,
+  );
+}
+
+export async function unsubscribeFromEphemeralMessages(
+  clientAddress: string,
+  topic: string,
+  conversationID?: string | undefined
+) {
+  return await XMTPModule.unsubscribeFromEphemeralMessages(
+    clientAddress,
+    topic,
+    conversationID,
+  );
+}
+
 
 export function registerPushToken(pushServer: string, token: string) {
   return XMTPModule.registerPushToken(pushServer, token);

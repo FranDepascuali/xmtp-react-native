@@ -17,6 +17,7 @@ import {
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   useConversation,
+  useReceivedEphemeralMessages,
   useMessage,
   useMessageReactions,
   useMessages,
@@ -27,6 +28,8 @@ import { useDebounce } from "./hooks/useDebounce";
 import TypingIndicator from "./TypingIndicator";
 import { usePrevious } from "./hooks/usePrevious";
 import { TypingStatus, useTypingStatus } from "./hooks/useIsTyping";
+import { useXmtp } from './XmtpContext';
+import { useAddressesTyping } from "./hooks/useUsersTyping";
 
 /// Show the messages in a conversation.
 export default function ConversationScreen({
@@ -51,7 +54,7 @@ export default function ConversationScreen({
     setSending(true);
     console.log("Sending message", content);
     try {
-      await conversation!.send(content);
+      await conversation!.send(content, false);
       await refreshMessages();
     } catch (e) {
       console.log("Error sending message", e);
@@ -85,9 +88,11 @@ export default function ConversationScreen({
   };
 
   // We debounce to avoid producing a lot of events when the user is typing
-  const debouncedTextMessage = useDebounce(text, 600)
+  const debouncedTextMessage = useDebounce(text, 200)
 
   const typingStatus = useTypingStatus(debouncedTextMessage)
+
+  const addressesTyping = useAddressesTyping(conversation)
 
   useEffect(() => {
     const sendTypingStatus = async () => {
@@ -95,15 +100,7 @@ export default function ConversationScreen({
         return
       }
 
-      switch (typingStatus) {
-        case TypingStatus.startedTyping:
-          console.log("user is typing")
-          return
-
-        case TypingStatus.finishedTyping:
-          console.log("user is not typing")
-          return
-      }
+      await conversation?.send(typingStatus, true)
     };
 
     sendTypingStatus();
@@ -125,7 +122,7 @@ export default function ConversationScreen({
         style={{ flex: 1, flexDirection: "column" }}
       >
         <View style={{ flex: 1 }}>
-          <TypingIndicator isTyping={debouncedTextMessage.length > 0} />
+          <TypingIndicator addressesTyping={addressesTyping} />
           <FlatList
             ref={messageListRef}
             style={{ flexGrow: 1 }}
