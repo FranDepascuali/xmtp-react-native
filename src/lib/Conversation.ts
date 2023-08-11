@@ -51,7 +51,7 @@ export class Conversation {
   }
 
   // TODO: support conversation ID
-  async send(content: string | MessageContent): Promise<string> {
+  async send(content: string | MessageContent, ephemeral: boolean): Promise<string> {
     try {
       if (typeof content === "string") {
         content = { text: content };
@@ -61,6 +61,7 @@ export class Conversation {
         this.topic,
         this.conversationID,
         content,
+        ephemeral,
       );
     } catch (e) {
       console.info("ERROR in send()", e);
@@ -115,4 +116,39 @@ export class Conversation {
       );
     };
   }
+
+  streamEphemeralMessages(
+    callback: (message: DecodedMessage) => Promise<void>,
+  ): () => void {
+    XMTP.subscribeToEphemeralMessages(
+      this.clientAddress,
+      this.topic,
+      this.conversationID,
+    );
+
+    XMTP.emitter.addListener(
+      "ephemeral-message",
+      async (message: {
+        topic: string;
+        conversationID: string | undefined;
+        messageJSON: string;
+      }) => {
+        if (
+          message.topic === this.topic &&
+          message.conversationID === this.conversationID
+        ) {
+          await callback(JSON.parse(message.messageJSON));
+        }
+      },
+    );
+
+    return () => {
+      XMTP.unsubscribeFromEphemeralMessages(
+        this.clientAddress,
+        this.topic,
+        this.conversationID,
+      );
+    };
+  }
+
 }

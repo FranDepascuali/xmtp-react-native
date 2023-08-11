@@ -14,15 +14,22 @@ import {
   TouchableWithoutFeedback,
   View,
 } from "react-native";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   useConversation,
+  useReceivedEphemeralMessages,
   useMessage,
   useMessageReactions,
   useMessages,
 } from "./hooks";
 import { MessageContent } from "xmtp-react-native-sdk";
 import moment from "moment";
+import { useDebounce } from "./hooks/useDebounce";
+import TypingIndicator from "./TypingIndicator";
+import { usePrevious } from "./hooks/usePrevious";
+import { TypingStatus, useTypingStatus } from "./hooks/useIsTyping";
+import { useXmtp } from './XmtpContext';
+import { useAddressesTyping } from "./hooks/useUsersTyping";
 
 /// Show the messages in a conversation.
 export default function ConversationScreen({
@@ -47,7 +54,7 @@ export default function ConversationScreen({
     setSending(true);
     console.log("Sending message", content);
     try {
-      await conversation!.send(content);
+      await conversation!.send(content, false);
       await refreshMessages();
     } catch (e) {
       console.log("Error sending message", e);
@@ -79,6 +86,27 @@ export default function ConversationScreen({
       animated: true,
     });
   };
+
+  // We debounce to avoid producing a lot of events when the user is typing
+  const debouncedTextMessage = useDebounce(text, 200)
+
+  const typingStatus = useTypingStatus(debouncedTextMessage)
+
+  const addressesTyping = useAddressesTyping(conversation)
+
+  useEffect(() => {
+    const sendTypingStatus = async () => {
+      if (!typingStatus) {
+        return
+      }
+
+      await conversation?.send(typingStatus, true)
+    };
+
+    sendTypingStatus();
+
+  }, [typingStatus])
+
   // const sendAttachment = () => sendMessage({
   //     attachment: {
   //         mimeType: "text/plain",
@@ -94,6 +122,7 @@ export default function ConversationScreen({
         style={{ flex: 1, flexDirection: "column" }}
       >
         <View style={{ flex: 1 }}>
+          <TypingIndicator addressesTyping={addressesTyping} />
           <FlatList
             ref={messageListRef}
             style={{ flexGrow: 1 }}
